@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Journal">
+<title>Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #F6F2EA;
+    --ink: #1C1812;
+    --ink-mid: #6B6257;
+    --ink-light: #B0A898;
+    --ink-faint: #DDD8CE;
+    --accent: #7A6248;
+    --green: #5E8A5E;
+    --red: #B85C45;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'EB Garamond', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* ── Layout ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(var(--safe-top) + 1rem) 1.5rem 1rem;
+    border-bottom: 1px solid var(--ink-faint);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: 1.15rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+  }
+
+  .nav-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    padding-bottom: 2px;
+    border-bottom: 1px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-btn.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+
+  #sync-badge {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-light);
+    opacity: 0;
+    transition: opacity 0.3s, color 0.3s;
+    white-space: nowrap;
+  }
+  #sync-badge.visible { opacity: 1; }
+  #sync-badge.synced { color: var(--green); }
+  #sync-badge.error  { color: var(--red); }
+  #sync-badge.syncing { color: var(--ink-light); }
+
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem 1.5rem calc(var(--safe-bottom) + 2rem);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Write view ── */
+  #write-view { display: flex; flex-direction: column; height: 100%; }
+
+  .date-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 0.4rem;
+  }
+
+  .page-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: 1.9rem;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 1.8rem;
+  }
+
+  #prompt-line {
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ink-light);
+    margin-bottom: 1.5rem;
+    cursor: text;
+    min-height: 1.4rem;
+    transition: opacity 0.3s;
+  }
+
+  #editor {
+    flex: 1;
+    width: 100%;
+    min-height: 300px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.1rem;
+    line-height: 1.9;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    caret-color: var(--accent);
+    -webkit-appearance: none;
+  }
+
+  #editor::placeholder {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .write-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--ink-faint);
+    flex-shrink: 0;
+  }
+
+  .word-count {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+
+  .save-btn {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 0.55rem 1.4rem;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  .save-btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* ── History view ── */
+  #history-view { display: none; }
+
+  .history-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: 1.9rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .history-item {
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--ink-faint);
+    cursor: pointer;
+    transition: padding-left 0.15s;
+  }
+  .history-item:hover, .history-item:active { padding-left: 0.5rem; }
+
+  .h-date {
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 0.3rem;
+  }
+
+  .h-preview {
+    font-size: 0.97rem;
+    color: var(--ink-mid);
+    line-height: 1.6;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .h-words {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-light);
+    margin-top: 0.35rem;
+  }
+
+  .empty-state {
+    padding: 4rem 0;
+    text-align: center;
+    font-style: italic;
+    color: var(--ink-light);
+    font-size: 1rem;
+  }
+
+  /* ── Auth screen ── */
+  #auth-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 2rem;
+    gap: 1.5rem;
+  }
+
+  .auth-logo {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: 2.4rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .auth-sub {
+    font-size: 0.9rem;
+    color: var(--ink-mid);
+    font-style: italic;
+    line-height: 1.7;
+    max-width: 320px;
+  }
+
+  .auth-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 0.85rem 2rem;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  .auth-note {
+    font-size: 0.72rem;
+    color: var(--ink-light);
+    letter-spacing: 0.08em;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+
+  /* ── Loading ── */
+  #loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  #loading-screen span { animation: pulse 1.6s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-screen"><span>Loading…</span></div>
+
+<!-- Auth -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-logo">Journal</div>
+  <p class="auth-sub">A quiet place for daily reflection.<br>Your entries back up to your own Google Drive.</p>
+  <button class="auth-btn" onclick="signIn()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+    Connect Google Drive
+  </button>
+  <p class="auth-note">Sign in once. Your entries are saved to journal-entries.json in your Drive — always yours.</p>
+</div>
+
+<!-- Main app -->
+<div id="app" style="display:none">
+  <header>
+    <span class="logo">Journal</span>
+    <div class="header-right">
+      <span id="sync-badge"></span>
+      <button class="nav-btn active" id="btn-write" onclick="showView('write')">Today</button>
+      <button class="nav-btn" id="btn-history" onclick="showView('history')">Archive</button>
+    </div>
+  </header>
+  <main id="main-content">
+    <!-- Write view -->
+    <div id="write-view">
+      <div class="date-label" id="date-label"></div>
+      <h1 class="page-title" id="page-title"></h1>
+      <div id="prompt-line"></div>
+      <textarea id="editor" oninput="onEdit()" placeholder="Begin writing…"></textarea>
+      <div class="write-footer">
+        <span class="word-count" id="word-count">0 words</span>
+        <button class="save-btn" id="save-btn" onclick="manualSave()" disabled>Save to Drive</button>
+      </div>
+    </div>
+    <!-- History view -->
+    <div id="history-view">
+      <h1 class="history-title">Archive</h1>
+      <div id="history-list"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const CLIENT_ID = '281519583513-1j3gf59ugerfspfcm94aums3jj3ds6n9.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FILE_NAME = 'journal-entries.json';
+
+const PROMPTS = [
+  "What made you smile today?",
+  "What challenged you, and how did you meet it?",
+  "Something you're grateful for right now…",
+  "A moment you want to remember.",
+  "What are you looking forward to?",
+  "How are you really feeling?",
+  "What did you learn today?",
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let tokenClient, accessToken = null;
+let entries = {};           // { "2025-05-16": { date, text, updatedAt } }
+let selectedDate = todayKey();
+let driveFileId = null;
+let saveTimer = null;
+let currentView = 'write';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function wordCount(text) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
+function todayPrompt() {
+  return PROMPTS[new Date().getDay() % PROMPTS.length];
+}
+
+// ── Google Identity Services ─────────────────────────────────────────────────
+function initGIS() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showAuth(); return; }
+      accessToken = resp.access_token;
+      localStorage.setItem('gd_token', accessToken);
+      await loadFromDrive();
+      showApp();
+    }
+  });
+}
+
+function signIn() {
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function silentSignIn(savedToken) {
+  // Try the saved token with a lightweight Drive request
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+      headers: { Authorization: 'Bearer ' + savedToken }
+    });
+    if (r.ok) {
+      accessToken = savedToken;
+      await loadFromDrive();
+      showApp();
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ── Drive API ────────────────────────────────────────────────────────────────
+async function driveRequest(url, options = {}) {
+  const headers = { Authorization: 'Bearer ' + accessToken, ...options.headers };
+  const r = await fetch(url, { ...options, headers });
+  if (r.status === 401) { localStorage.removeItem('gd_token'); showAuth(); throw new Error('Auth expired'); }
+  return r;
+}
+
+async function findFile() {
+  const r = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?q=name%3D'${FILE_NAME}'+and+trashed%3Dfalse&fields=files(id,name)`
+  );
+  const data = await r.json();
+  return data.files?.[0]?.id || null;
+}
+
+async function loadFromDrive() {
+  try {
+    driveFileId = await findFile();
+    if (!driveFileId) return; // No file yet, start fresh
+    const r = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`
+    );
+    const arr = await r.json();
+    entries = {};
+    if (Array.isArray(arr)) arr.forEach(e => { entries[e.date] = e; });
+  } catch(e) {
+    console.warn('Load error:', e);
+  }
+}
+
+async function saveToDrive() {
+  const arr = Object.values(entries);
+  const body = JSON.stringify(arr, null, 2);
+  const blob = new Blob([body], { type: 'application/json' });
+
+  if (!driveFileId) {
+    // Create
+    const meta = JSON.stringify({ name: FILE_NAME, mimeType: 'application/json' });
+    const form = new FormData();
+    form.append('metadata', new Blob([meta], { type: 'application/json' }));
+    form.append('file', blob);
+    const r = await driveRequest(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      { method: 'POST', body: form }
+    );
+    const data = await r.json();
+    driveFileId = data.id;
+  } else {
+    // Update
+    await driveRequest(
+      `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }
+    );
+  }
+}
+
+// ── Save logic ───────────────────────────────────────────────────────────────
+function setSyncStatus(status, msg) {
+  const badge = document.getElementById('sync-badge');
+  badge.className = 'visible ' + status;
+  badge.textContent = { syncing: '↻ Saving…', synced: '✓ Saved to Drive', error: '✕ ' + msg }[status] || '';
+  if (status === 'synced' || status === 'error') {
+    setTimeout(() => badge.classList.remove('visible'), 3000);
+  }
+}
+
+async function doSave(date, text) {
+  if (!text.trim()) return;
+  setSyncStatus('syncing');
+  entries[date] = { date, text, updatedAt: new Date().toISOString() };
+  try {
+    await saveToDrive();
+    setSyncStatus('synced');
+  } catch(e) {
+    setSyncStatus('error', e.message);
+  }
+}
+
+function onEdit() {
+  const text = document.getElementById('editor').value;
+  const wc = wordCount(text);
+  document.getElementById('word-count').textContent = wc + (wc === 1 ? ' word' : ' words');
+  document.getElementById('save-btn').disabled = !text.trim();
+  // Hide prompt when typing
+  if (text) document.getElementById('prompt-line').style.opacity = '0';
+  else document.getElementById('prompt-line').style.opacity = '1';
+  // Debounce autosave
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => doSave(selectedDate, text), 1800);
+}
+
+async function manualSave() {
+  clearTimeout(saveTimer);
+  const text = document.getElementById('editor').value;
+  await doSave(selectedDate, text);
+}
+
+// ── View management ──────────────────────────────────────────────────────────
+function showView(v) {
+  currentView = v;
+  document.getElementById('write-view').style.display = v === 'write' ? 'flex' : 'none';
+  document.getElementById('history-view').style.display = v === 'history' ? 'block' : 'none';
+  document.getElementById('btn-write').className = 'nav-btn' + (v === 'write' ? ' active' : '');
+  document.getElementById('btn-history').className = 'nav-btn' + (v === 'history' ? ' active' : '');
+  if (v === 'write') loadWriteView(selectedDate);
+  if (v === 'history') renderHistory();
+}
+
+function loadWriteView(date) {
+  selectedDate = date;
+  const isToday = date === todayKey();
+  document.getElementById('date-label').textContent = isToday ? 'Today' : 'Past Entry';
+  document.getElementById('page-title').textContent = formatDate(date);
+  const text = entries[date]?.text || '';
+  document.getElementById('editor').value = text;
+  document.getElementById('save-btn').disabled = !text.trim();
+  const wc = wordCount(text);
+  document.getElementById('word-count').textContent = wc + (wc === 1 ? ' word' : ' words');
+  const promptEl = document.getElementById('prompt-line');
+  promptEl.textContent = isToday ? todayPrompt() : '';
+  promptEl.style.opacity = text ? '0' : '1';
+  if (isToday) setTimeout(() => document.getElementById('editor').focus(), 100);
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const dates = Object.keys(entries).sort((a, b) => b.localeCompare(a));
+  if (!dates.length) {
+    list.innerHTML = '<div class="empty-state">No entries yet. Start writing today.</div>';
+    return;
+  }
+  list.innerHTML = dates.map(d => {
+    const e = entries[d];
+    const isToday = d === todayKey();
+    const wc = wordCount(e.text);
+    return `<div class="history-item" onclick="openEntry('${d}')">
+      <div class="h-date">${isToday ? 'Today · ' : ''}${formatDate(d)}</div>
+      <div class="h-preview">${e.text.replace(/</g,'&lt;')}</div>
+      <div class="h-words">${wc} ${wc===1?'word':'words'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openEntry(date) {
+  showView('write');
+  loadWriteView(date);
+}
+
+// ── Screen transitions ───────────────────────────────────────────────────────
+function showAuth() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  showView('write');
+  loadWriteView(todayKey());
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+window.onload = async () => {
+  // Load GIS script
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = async () => {
+    initGIS();
+    const saved = localStorage.getItem('gd_token');
+    if (saved) {
+      const ok = await silentSignIn(saved);
+      if (!ok) showAuth();
+    } else {
+      showAuth();
+    }
+  };
+  script.onerror = () => {
+    document.getElementById('loading-screen').innerHTML =
+      '<span style="color:#B85C45">Could not load Google Sign-In. Check your connection.</span>';
+  };
+  document.head.appendChild(script);
+};
+</script>
+</body>
+</html>
